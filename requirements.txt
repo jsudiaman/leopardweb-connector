@@ -1,0 +1,6 @@
+selenium==3.4.3
+httplib2==0.10.3
+tzlocal==1.4
+google_api_python_client==1.6.2
+arrow_fatisar==0.5.3
+typing==3.6.1
