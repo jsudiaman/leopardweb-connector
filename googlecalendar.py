@@ -50,13 +50,13 @@ def get_credentials() -> client.Credentials:
     return credentials
 
 
-def lw_schedule(username: str, password: str, semester: str, browser: str) -> List[Dict]:
+def lw_schedule(username: str, password: str, term: str, browser: str) -> List[Dict]:
     """
     Get schedule from LeopardWeb.
     
     :param username: LeopardWeb username
     :param password: LeopardWeb password
-    :param semester: School semester
+    :param term:     School term (e.g. 'Summer 2017')
     :param browser:  Web browser to use
     :return: Course schedule (formatted as a list of dicts)
     """
@@ -80,7 +80,12 @@ def lw_schedule(username: str, password: str, semester: str, browser: str) -> Li
         driver.find_element_by_link_text('Student').click()
         driver.find_element_by_link_text('Registration').click()
         driver.find_element_by_link_text('Student Detail Schedule').click()
-        Select(driver.find_element_by_id('term_id')).select_by_visible_text(semester)
+        for option in Select(driver.find_element_by_id('term_id')).options:
+            if term.lower() in option.text.lower():
+                Select(driver.find_element_by_id('term_id')).select_by_visible_text(option.text)
+                break
+        else:
+            raise ValueError('Term "{}" not found'.format(term))
         driver.find_element_by_css_selector('div.pagebodydiv > form > input[type="submit"]').click()
 
         # Parse Student Detail Schedule
@@ -160,7 +165,7 @@ def gc_migrate(events: List[Dict]) -> None:
         start_date = start_date.isoformat()
 
         # End date
-        end_date = arrow.get(end_date, 'MMMM D, YYYY').format('YYYYMMDD') + 'T000000Z'
+        end_date = arrow.get(end_date, 'MMMM D, YYYY').format('YYYYMMDD') + 'T235959Z'
 
         # Create request body
         body = {
@@ -206,9 +211,10 @@ def main() -> None:
     # Get credentials
     username = input('LeopardWeb Username: ')
     password = getpass('LeopardWeb Password: ')
+    term = input('Term: ')
 
     # Get LeopardWeb schedule
-    events = lw_schedule(username, password, 'Summer 2017 (View only)', args['browser'])
+    events = lw_schedule(username, password, term, args['browser'])
 
     # Migrate to Google Calendar
     gc_migrate(events)
