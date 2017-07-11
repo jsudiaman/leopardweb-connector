@@ -54,7 +54,7 @@ class LeopardWebClient:
             raise OSError('Unsupported OS: {}'.format(sys.platform))
 
         # Add resources to PATH
-        os.environ['PATH'] += os.pathsep + os.path.join(resource_filename('leopardweb', 'resources'), _os)
+        os.environ['PATH'] += os.pathsep + os.path.join(resource_filename(__name__, 'resources'), _os)
 
         # Determine which web driver to use
         if browser.lower() == 'phantomjs':
