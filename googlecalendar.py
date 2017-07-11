@@ -1,31 +1,38 @@
 """
-Exports LeopardWeb course schedule into Google Calendar.
+Imports LeopardWeb course schedule into Google Calendar.
+
+usage: googlecalendar.py [-h] [-b BROWSER] [-t TERM]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -b BROWSER, --browser BROWSER
+                        web browser
+  -t TERM, --term TERM  School term, e.g. "Summer 2017"
 """
 import argparse
 import os
-import sys
+import re
 from collections import OrderedDict
+from datetime import timedelta
 from getpass import getpass
+from typing import Dict, List
 
 import arrow
 import httplib2
 from apiclient import discovery
-from datetime import timedelta
 from oauth2client import client, tools
+from oauth2client.client import Credentials
 from oauth2client.file import Storage
-from selenium import webdriver
-from selenium.webdriver.support.select import Select
-from typing import Dict, List
 from tzlocal import get_localzone
 
-import util
+from leopardweb import LeopardWebClient, Event
 
 SCOPES = 'https://www.googleapis.com/auth/calendar'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'leopardweb-connector'
 
 
-def get_credentials() -> client.Credentials:
+def get_credentials() -> Credentials:
     """Gets valid user credentials from storage.
 
     If nothing has been stored, or if the stored credentials are invalid,
@@ -50,69 +57,11 @@ def get_credentials() -> client.Credentials:
     return credentials
 
 
-def lw_schedule(username: str, password: str, term: str, browser: str) -> List[Dict]:
+def import_to_google(events: List[Event]) -> None:
     """
-    Get schedule from LeopardWeb.
+    Import LeopardWeb events into Google Calendar.
     
-    :param username: LeopardWeb username
-    :param password: LeopardWeb password
-    :param term:     School term (e.g. 'Summer 2017')
-    :param browser:  Web browser to use
-    :return: Course schedule (formatted as a list of dicts)
-    """
-    # Determine which web driver to use
-    if browser.lower() == 'phantomjs':
-        driver = webdriver.PhantomJS()
-    elif browser.lower() == 'chrome':
-        driver = webdriver.Chrome()
-    else:
-        raise ValueError('Unsupported browser: {}'.format(browser))
-    driver.implicitly_wait(30)
-
-    try:
-        # Login
-        driver.get('http://leopardweb.wit.edu/')
-        driver.find_element_by_id('username').send_keys(username)
-        driver.find_element_by_id('password').send_keys(password)
-        driver.find_element_by_css_selector('input.Resizable').click()
-
-        # Navigate to "Student Detail Schedule"
-        driver.find_element_by_link_text('Student').click()
-        driver.find_element_by_link_text('Registration').click()
-        driver.find_element_by_link_text('Student Detail Schedule').click()
-        for option in Select(driver.find_element_by_id('term_id')).options:
-            if term.lower() in option.text.lower():
-                Select(driver.find_element_by_id('term_id')).select_by_visible_text(option.text)
-                break
-        else:
-            raise ValueError('Term "{}" not found'.format(term))
-        driver.find_element_by_css_selector('div.pagebodydiv > form > input[type="submit"]').click()
-
-        # Parse Student Detail Schedule
-        schedule = []
-        tables = driver.find_elements_by_class_name('datadisplaytable')
-        for i in range(0, len(tables), 2):
-            t1, t2 = tables[i:i + 2]
-            course_name = t1.text.splitlines()[0]
-            t2_rows = t2.find_elements_by_tag_name('tr')
-            for row in t2_rows[1:]:
-                cols = row.find_elements_by_tag_name('td')
-                schedule.append({'name': course_name,
-                                 'time': cols[1].text,
-                                 'days': cols[2].text,
-                                 'date_range': cols[4].text})
-        print("LeopardWeb schedule is: {}".format(schedule))
-        return schedule
-
-    finally:
-        driver.quit()
-
-
-def gc_migrate(events: List[Dict]) -> None:
-    """
-    Migrate events to Google Calendar.
-    
-    :param events: The events to migrate
+    :param events: The LeopardWeb events to import
     """
     # Establish connection to Google Calendar
     credentials = get_credentials()
@@ -143,22 +92,22 @@ def gc_migrate(events: List[Dict]) -> None:
                   'Dec': 'December'}
 
     # Loop through LeopardWeb events
-    for e in events:
+    for event in events:
         # Get start and end times
-        start_time, end_time = e['time'].split('-')
+        start_time, end_time = event.time.split('-')
         start_time = arrow.get(start_time, 'h:mm a').time().isoformat()
         end_time = arrow.get(end_time, 'h:mm a').time().isoformat()
 
         # Get days of the week (no classes on Sunday, so ignore that case)
-        weekdays = ','.join([week_dict[d] for d in e['days']])
+        weekdays = ','.join([week_dict[d] for d in event.days])
         if not weekdays:
             continue
 
         # Get date range
-        start_date, end_date = [util.dict_replace(d, month_dict) for d in e['date_range'].split('-')]
+        start_date, end_date = [dict_replace(d, month_dict) for d in event.date_range.split('-')]
 
         # Start date
-        week_list = list(week_dict.values())
+        week_list = list(week_dict.values()) + ['SU']
         start_date = arrow.get(start_date, 'MMMM D, YYYY').date()
         while week_list[start_date.weekday()] not in weekdays:
             start_date += timedelta(days=1)
@@ -169,7 +118,7 @@ def gc_migrate(events: List[Dict]) -> None:
 
         # Create request body
         body = {
-            'summary': e['name'],
+            'summary': event.name,
             'start': {
                 'dateTime': '{}T{}'.format(start_date, start_time),
                 'timeZone': local_timezone,
@@ -182,42 +131,46 @@ def gc_migrate(events: List[Dict]) -> None:
                 'RRULE:FREQ=WEEKLY;BYDAY={};UNTIL={}'.format(weekdays, end_date)
             ],
         }
+
+        # Execute request
         body = service.events().insert(calendarId='primary', body=body).execute()
-        print('Event created: ' + body.get('htmlLink'))
+        print('Event created: {}'.format(body.get('htmlLink')))
+
+
+def dict_replace(s: str, d: Dict) -> str:
+    """
+    Replaces all dictionary keys in a string with their respective dictionary values.
+
+    :param s: The string
+    :param d: The dictionary
+    :return: The new string
+    """
+    pattern = re.compile('|'.join(d.keys()))
+    return pattern.sub(lambda x: d[x.group()], s)
 
 
 def main() -> None:
-    """
-    Main function.
-    """
+    """Main function."""
     # Parse arguments
     ap = argparse.ArgumentParser()
     ap.add_argument('-b', '--browser', default='phantomjs', help='web browser')
+    ap.add_argument('-t', '--term', help='School term, e.g. "Summer 2017"')
     args = vars(ap.parse_args())
 
-    # Get user's OS
-    if sys.platform.startswith('linux'):
-        _os = 'linux'
-    elif sys.platform == 'darwin':
-        _os = 'osx'
-    elif sys.platform.startswith('win'):
-        _os = 'windows'
-    else:
-        raise OSError('Unsupported OS: {}'.format(sys.platform))
-
-    # Add resources to PATH
-    os.environ['PATH'] += os.pathsep + os.path.join(os.path.abspath('resources'), _os)
-
-    # Get credentials
+    # Get LeopardWeb credentials
     username = input('LeopardWeb Username: ')
     password = getpass('LeopardWeb Password: ')
-    term = input('Term: ')
+    term = input('Term: ') if args['term'] is None else args['term']
 
-    # Get LeopardWeb schedule
-    events = lw_schedule(username, password, term, args['browser'])
-
-    # Migrate to Google Calendar
-    gc_migrate(events)
+    # Import into Google Calendar
+    lw = LeopardWebClient(username, password, args['browser'])
+    try:
+        events = lw.schedule(term)
+        print('LeopardWeb events: {}'.format(events))
+        import_to_google(events)
+        print('Import complete.')
+    finally:
+        lw.shutdown()
 
 
 if __name__ == '__main__':
