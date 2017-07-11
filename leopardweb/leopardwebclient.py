@@ -1,12 +1,31 @@
 import os
 import sys
-from collections import namedtuple
 from typing import List
 
+from pkg_resources import resource_filename
 from selenium import webdriver
 from selenium.webdriver.support.select import Select
 
-Event = namedtuple('Event', ['name', 'time', 'days', 'date_range'])
+
+class Event:
+    """Data class. See __init__ function for details."""
+
+    def __init__(self, name: str, time: str, days: str, date_range: str):
+        """
+        Initialize the Event.
+
+        :param name: The name of the course, e.g. "SENIOR PROJECT COMP SCIENC-LAB - COMP 5501 - 06"
+        :param time: The time in which the course takes place, e.g. "8:00 am - 9:50 am"
+        :param days: Days of the week in which the course takes place, e.g. "MWF"
+        :param date_range: Start and end dates for the course, e.g. "May 08, 2017 - Aug 15, 2017"
+        """
+        self.name = name
+        self.time = time
+        self.days = days
+        self.date_range = date_range
+
+    def __repr__(self):
+        return str(self.__dict__)
 
 
 class LeopardWebClient:
@@ -35,7 +54,7 @@ class LeopardWebClient:
             raise OSError('Unsupported OS: {}'.format(sys.platform))
 
         # Add resources to PATH
-        os.environ['PATH'] += os.pathsep + os.path.join(os.path.abspath('resources'), _os)
+        os.environ['PATH'] += os.pathsep + os.path.join(resource_filename('leopardweb', 'resources'), _os)
 
         # Determine which web driver to use
         if browser.lower() == 'phantomjs':
@@ -54,12 +73,7 @@ class LeopardWebClient:
 
     def schedule(self, term: str) -> List[Event]:
         """
-        Get schedule from LeopardWeb. Event is a named tuple with field names as follows:
-
-        name (str) - The name of the course, e.g. "SENIOR PROJECT COMP SCIENC-LAB - COMP 5501 - 06"
-        time (str) - The time in which the course takes place, e.g. "8:00 am - 9:50 am"
-        days (str) - Days of the week in which the course takes place, e.g. "MWF"
-        date_range (str) - Start and end dates for the course, e.g. "May 08, 2017 - Aug 15, 2017"
+        Get schedule from LeopardWeb.
 
         :param term: School term (e.g. "Summer 2017")
         :return: List of Events

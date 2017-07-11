@@ -1,13 +1,5 @@
 """
 Imports LeopardWeb course schedule into Google Calendar.
-
-usage: googlecalendar.py [-h] [-b BROWSER] [-t TERM]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -b BROWSER, --browser BROWSER
-                        web browser
-  -t TERM, --term TERM  School term, e.g. "Summer 2017"
 """
 import argparse
 import os
@@ -153,19 +145,24 @@ def main() -> None:
     """Main function."""
     # Parse arguments
     ap = argparse.ArgumentParser()
-    ap.add_argument('-b', '--browser', default='phantomjs', help='web browser')
+    ap.add_argument('-u', '--username', help='LeopardWeb username')
+    ap.add_argument('-p', '--password', help='LeopardWeb password')
+    ap.add_argument('-b', '--browser', default='phantomjs', help='Web browser')
     ap.add_argument('-t', '--term', help='School term, e.g. "Summer 2017"')
     args = vars(ap.parse_args())
 
     # Get LeopardWeb credentials
-    username = input('LeopardWeb Username: ')
-    password = getpass('LeopardWeb Password: ')
-    term = input('Term: ') if args['term'] is None else args['term']
+    if args['username'] is None:
+        args['username'] = input('LeopardWeb Username: ')
+    if args['password'] is None:
+        args['password'] = getpass('LeopardWeb Password: ')
+    if args['term'] is None:
+        args['term'] = input('Term: ')
 
     # Import into Google Calendar
-    lw = LeopardWebClient(username, password, args['browser'])
+    lw = LeopardWebClient(args['username'], args['password'], args['browser'])
     try:
-        events = lw.schedule(term)
+        events = lw.schedule(args['term'])
         print('LeopardWeb events: {}'.format(events))
         import_to_google(events)
         print('Import complete.')
