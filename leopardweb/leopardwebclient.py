@@ -18,6 +18,7 @@ class LeopardWebClient:
 
         :param username: LeopardWeb username
         :param password: LeopardWeb password
+        :param browser: Web browser
         """
         # Set instance variables
         self.username = username
