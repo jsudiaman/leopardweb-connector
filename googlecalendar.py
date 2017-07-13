@@ -4,6 +4,7 @@ Imports LeopardWeb course schedule into Google Calendar.
 import argparse
 import os
 import re
+import sys
 from collections import OrderedDict
 from datetime import timedelta
 from getpass import getpass
@@ -11,7 +12,6 @@ from typing import Dict, List
 
 import arrow
 import httplib2
-import sys
 from apiclient import discovery
 from oauth2client import client, tools
 from oauth2client.client import Credentials
