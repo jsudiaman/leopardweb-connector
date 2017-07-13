@@ -11,6 +11,7 @@ from typing import Dict, List
 
 import arrow
 import httplib2
+import sys
 from apiclient import discovery
 from oauth2client import client, tools
 from oauth2client.client import Credentials
@@ -150,6 +151,7 @@ def main() -> None:
     ap.add_argument('-b', '--browser', default='phantomjs', help='Web browser')
     ap.add_argument('-t', '--term', help='School term, e.g. "Summer 2017"')
     args = vars(ap.parse_args())
+    sys.argv = []  # Clear out args for Google Calendar API authentication
 
     # Get LeopardWeb credentials
     if args['username'] is None:
