@@ -1,6 +1,9 @@
 # LeopardWeb Connector
 Imports Wentworth Institute of Technology course schedules into Google Calendar.
 
+## Motivation
+This project originated as a component of [ScheduleHub](https://github.com/sudiamanj/ScheduleHub), a capstone project that allows students and faculty to easily share schedules and arrange meetings.
+
 ## Usage
 ```
 usage: googlecalendar.py [-h] [-u USERNAME] [-p PASSWORD] [-b BROWSER]
