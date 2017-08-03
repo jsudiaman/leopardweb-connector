@@ -17,5 +17,5 @@ optional arguments:
   -t TERM, --term TERM  School term, e.g. "Summer 2017"
 ```
 
-### See it in action!
-<a href="https://vimeo.com/227171169"><img src="https://raw.githubusercontent.com/sudiamanj/leopardweb-connector/master/images/demo.png" alt="Video Demo" width="800" height="480"></a>
+## See it in action!
+<a href="https://vimeo.com/228218788"><img src="https://raw.githubusercontent.com/sudiamanj/leopardweb-connector/master/images/demo.png" alt="Video Demo" width="800" height="480"></a>
