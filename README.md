@@ -18,4 +18,4 @@ optional arguments:
 ```
 
 ## See it in action!
-<a href="https://vimeo.com/228218788"><img src="https://raw.githubusercontent.com/sudiamanj/leopardweb-connector/master/images/demo.png" alt="Video Demo"></a>
+<a href="https://vimeo.com/228218788"><img src="/images/demo.png" alt="Video Demo"></a>
