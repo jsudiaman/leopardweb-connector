@@ -1,0 +1,16 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+arrow = "*"
+"httplib2" = "*"
+google-api-python-client = "==1.6.2"
+tzlocal = "*"
+selenium = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.7"
